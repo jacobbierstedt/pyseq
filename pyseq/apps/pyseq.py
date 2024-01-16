@@ -18,6 +18,9 @@ bin_reads    |  Create kmer database from reference sequence and search reads
 
 
 def main():
+    if len(sys.argv) < 2:
+        print(USAGE)
+        exit()
     subcommand = sys.argv[1]
     if any([subcommand == i for i in ["-h", "--help"]]):
         print(USAGE)
