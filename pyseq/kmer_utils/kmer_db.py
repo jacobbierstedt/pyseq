@@ -1,6 +1,7 @@
 import os
 import math
 import json
+import zlib
 
 from .kmer_utils import get_minimized_kmers
 
@@ -54,6 +55,40 @@ class KmerDb(object):
         for block in reference.sequence_blocks:
             self.add_references(block, bins)
         self.finialize_database(bin_threshold)
+
+    def write_pyseq_dbi(self, output_path:str):
+        """
+        Write finished database to a file.
+        :param output_path: path to write database file
+        """
+        db = ""
+        for minimizer, bins in self.kmers.items():
+            info = {
+                "kmer" : minimizer,
+                "bins" : [{"bin_id" : bin_id, "n" : bin_result.unweighted} for bin_id, bin_result in bins.items()]
+            }
+            db += f"{json.dumps(info)}\n"
+        cmp = zlib.compress(db.encode(), 3)
+        with open(output_path, "wb") as f:
+            f.write(cmp)
+
+    def load_pyseq_dbi(self, database_path: str):
+        """
+        Load existing pyseq database from file.
+        :param database_path: path to existing database
+        """
+        with open(database_path, "rb") as f:
+            buf = f.read()
+        data = zlib.decompress(buf).decode()
+        for line in data.split("\n"):
+            if len(line) > 2:
+                info = json.loads(line)
+                kmer = info["kmer"]
+                bins = info["bins"]
+                self.kmers.setdefault(kmer, {})
+                for bin in bins:
+                    self.kmers[kmer].setdefault(bin["bin_id"], BinResult(bin_name = bin["bin_id"]))
+                    self.kmers[kmer][bin["bin_id"]].unweighted = bin["n"]
 
     def add_references(self, reference: SequenceBlock, bins: dict):
         """
