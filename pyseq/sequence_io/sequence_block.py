@@ -1,9 +1,15 @@
 import os
 
 
+
+
 class SequenceRead(object):
     """
     Class to handle data associated with a nucleotide or amino acid sequence.
+    :param sequence: DNA sequence string
+    :param quality_scores: Fastq quality score string
+    :param comment: Fastq comment string
+    :param name: Name of sequence
     """
     DEFAULT_QUALITY = "I"
     ALPHABET = {
@@ -24,18 +30,31 @@ class SequenceRead(object):
         comment        = "+",
         name           = ""):
         super(SequenceRead, self).__init__()
-        self.sequence        = self.check_sequence(sequence)
-        self.quality_scores  = quality_scores
-        self.comment         = comment
-        self.name            = name
-        # self.seq_rc          = self.reverse_complement(self.sequence)
-        self.minimized_kmers    = {}
-        self.kmer_count      = 0
-        self.minimizer_count = 0
+        self.sequence        = self.check_sequence(sequence.strip())
+        self.quality_scores  = quality_scores.strip()
+        self.comment         = comment.strip()
+        self.name            = name.replace(">", "").replace("@", "")
 
         # Set default quality scores if absent or invalid
+        self.set_default_quality()
+
+    def set_default_quality(self):
+        """
+        Set default quality if quality information is absent or invalid
+        """
         if len(self.quality_scores) != len(self.sequence):
             self.quality_scores = self.DEFAULT_QUALITY * len(self.sequence)
+
+    def from_fastq_string(self, read: str):
+        """
+        Instantiate object from four lines of a fastq file.
+        :param read: string containing fastq read
+        """
+        read = read.strip().split("\n")
+        self.name           = read[0].replace("@", "")
+        self.sequence       = read[1]
+        self.comment        = read[2]
+        self.quality_scores = read[3]
 
     @staticmethod
     def check_sequence(sequence: str) -> str:
@@ -51,6 +70,9 @@ class SequenceRead(object):
                 seq.append("N")
         return "".join(seq)
 
+    def __str__(self):
+            return f"@{self.name}\n{self.sequence}\n{self.comment}\n{self.quality_scores}"
+
 
 class SequenceBlock(object):
     """
@@ -65,7 +87,7 @@ class SequenceBlock(object):
         self.kmer_count      = 0
         self.minimized_kmers = {}
 
-    def add_sequence_block(self, sequence: str):
+    def add_sequence_block_from_str(self, sequence: str):
         """
         Create sequence block from sequence string.
         :pararm sequence: string containing sequence data in fasta or fastq format
@@ -126,3 +148,6 @@ class SequenceBlock(object):
         r = string.split(char)[0]
         l = len(r)
         return r.replace("\n", ""), l
+
+    def __str__(self):
+        return f"SequenceBlock(n_seqs={len(self.sequences)})"
