@@ -7,10 +7,11 @@ from .kmer_utils import get_minimized_kmers
 
 class SequenceFile: pass
 class SequenceBlock: pass
+class KmerDbParameterException(Exception): pass
 
 
 class BinResult(object):
-    """docstring for BinResult."""
+    """Class to handle results, data, and counts from a single bin"""
     def __init__(self, bin_name = None, weighted = 0, unweighted = 0):
         super(BinResult, self).__init__()
         self.bin_name = bin_name
@@ -41,6 +42,7 @@ class KmerDb(object):
         self.bin_counts       = {}
         self.kmers            = {}
         self.weighted_kmers   = {}
+        self.reference_count  = 0
 
     def build_kmer_database(self,
         reference     : SequenceFile,
@@ -61,7 +63,12 @@ class KmerDb(object):
         Write finished database to a file.
         :param output_path: path to write database file
         """
-        db = ""
+        db_meta = [
+            self.kmer_length,
+            self.minimizer_length,
+            self.max_ambiguous,
+            self.reference_count ]
+        db = f"{json.dumps(db_meta)}metadata"
         for minimizer, bins in self.kmers.items():
             info = {
                 "kmer" : minimizer,
@@ -80,7 +87,10 @@ class KmerDb(object):
         with open(database_path, "rb") as f:
             buf = f.read()
         data = zlib.decompress(buf).decode()
-        for line in data.split("\n"):
+        data = data.split("metadata")
+        metadata = json.loads(data[0])
+        self.check_db_meta(metadata)
+        for line in data[1].split("\n"):
             if len(line) > 2:
                 info = json.loads(line)
                 kmer = info["kmer"]
@@ -89,6 +99,23 @@ class KmerDb(object):
                 for bin in bins:
                     self.kmers[kmer].setdefault(bin["bin_id"], BinResult(bin_name = bin["bin_id"]))
                     self.kmers[kmer][bin["bin_id"]].unweighted = bin["n"]
+
+    def check_db_meta(self, metadata: list):
+        """
+        Assert that database parameters match those given when object was
+        instantiated.
+        :param metadata: list containing database parameters
+        """
+        obj_meta = [
+            self.kmer_length,
+            self.minimizer_length,
+            self.max_ambiguous
+            ]
+        for i in range(0, len(obj_meta)):
+            try:
+                assert metadata[i] == obj_meta[i]
+            except AssertionError:
+                raise KmerDbParameterException(f"Query parameters do not match those provided in database file")
 
     def add_references(self, reference: SequenceBlock, bins: dict):
         """
@@ -114,6 +141,7 @@ class KmerDb(object):
             self.kmers.setdefault(minimizer, {})
             self.kmers[minimizer].setdefault(bin_id, BinResult(bin_name = bin_id))
             self.kmers[minimizer][bin_id].unweighted += kmer_count
+            self.reference_count += 1
 
     def finialize_database(self, bin_threshold: int):
         """
