@@ -2,28 +2,36 @@ import os
 import argparse
 import json
 
-# from pyseq import kmer_utils
 from pyseq.kmer_utils import KmerDb
 from pyseq.sequence_io import SequenceFile
+
 
 USAGE = """pyseq bin_reads [-h] -r REFERENCES -i INPUT -b BINS_JSON [-k KMER_LENGTH] [-m MINIMIZER_LENGTH] [-a AMBIGUITY_THRESHOLD]
 """
 
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description =
-        f"""Create a minimizer-based kmer reference database and bin reads against it""",
+        f"""Bin reads against a minimizer-based kmer reference database.""",
         usage=USAGE,
-        formatter_class = argparse.RawDescriptionHelpFormatter
+        formatter_class=lambda prog: argparse.MetavarTypeHelpFormatter(prog, max_help_position=60)
     )
     parser.add_argument(
         "bin_reads",
-        type = str
+        type = str,
+        help = argparse.SUPPRESS
+    )
+    parser.add_argument(
+        "-d", "--database",
+        type     = str,
+        required = False,
+        help     = "Path to pyseq kmer db"
     )
     parser.add_argument(
         "-r", "--references",
         type     = str,
-        required = True,
+        required = False,
         help     = "Fasta containing nucleotide reference sequences"
     )
     parser.add_argument(
@@ -89,13 +97,15 @@ def main():
     kmer_db = KmerDb(args.kmer_length, args.minimizer_length)
     bins = load_bin_json(args.bins_json)
 
-    db_ref = SequenceFile()
-    db_ref.load_sequence_blocks_from_file(args.references)
+    if args.database:
+        kmer_db.load_pyseq_dbi(args.database)
+    else:
+        db_ref = SequenceFile()
+        db_ref.load_sequence_blocks_from_file(args.references)
+        kmer_db.build_kmer_database(db_ref, bins, args.ambiguity_threshold)
 
     query_seqs = SequenceFile()
     query_seqs.load_sequence_blocks_from_file(args.input)
-
-    kmer_db.build_kmer_database(db_ref, bins, args.ambiguity_threshold)
 
     results = {}
     for block in query_seqs.sequence_blocks:
@@ -103,8 +113,6 @@ def main():
         results.update(block_results)
 
     write_output_file(results, args.output_file)
-
-
 
 
 if __name__ == '__main__':
