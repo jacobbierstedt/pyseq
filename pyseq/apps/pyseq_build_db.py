@@ -13,32 +13,27 @@ USAGE = """pyseq bin_reads [-h] -r REFERENCES -i INPUT -b BINS_JSON [-k KMER_LEN
 def parse_args():
     parser = argparse.ArgumentParser(
         description =
-        f"""Bin reads against a minimizer-based kmer reference database.""",
+        f"""Create a minimizer-based kmer reference database and write to file.""",
         usage=USAGE,
         formatter_class=lambda prog: argparse.MetavarTypeHelpFormatter(prog, max_help_position=60)
     )
     parser.add_argument(
-        "bin_reads",
+        "build_db",
         type = str,
         help = argparse.SUPPRESS
     )
     parser.add_argument(
-        "-d", "--database",
-        type     = str,
-        required = False,
-        help     = "Path to pyseq kmer db"
-    )
-    parser.add_argument(
         "-r", "--references",
         type     = str,
-        required = False,
-        help     = "Fasta containing nucleotide reference sequences"
+        required = True,
+        help     = "fasta containing nucleotide reference sequences"
     )
     parser.add_argument(
-        "-i", "--input",
+        "-o", "--output",
         type     = str,
-        required = True,
-        help     = "Input reads fastq/a format"
+        required = False,
+        default  = "database.pyseq.dbi",
+        help     = "output database file"
     )
     parser.add_argument(
         "-b", "--bins_json",
@@ -67,15 +62,7 @@ def parse_args():
         default  = 2,
         help     = "kmer bin assignment abiguity threshold"
     )
-    parser.add_argument(
-        "-o", "--output_file",
-        type     = str,
-        required = False,
-        default  = "binned_reads.json",
-        help     = "Output json file with binned reads"
-    )
     return parser.parse_args()
-
 
 def load_bin_json(path):
     """
@@ -86,34 +73,16 @@ def load_bin_json(path):
         bins = json.load(f)
     return bins
 
-
-def write_output_file(info, path):
-    with open(path, "w") as f:
-        json.dump(info, f)
-
-
 def main():
     args = parse_args()
     kmer_db = KmerDb(args.kmer_length, args.minimizer_length)
     bins = load_bin_json(args.bins_json)
 
-    if args.database:
-        kmer_db.load_pyseq_dbi(args.database)
-    else:
-        db_ref = SequenceFile()
-        db_ref.load_sequence_blocks_from_file(args.references)
-        kmer_db.build_kmer_database(db_ref, bins, args.ambiguity_threshold)
+    db_ref = SequenceFile()
+    db_ref.load_sequence_blocks_from_file(args.references)
 
-    query_seqs = SequenceFile()
-    query_seqs.load_sequence_blocks_from_file(args.input)
-
-    results = {}
-    for block in query_seqs.sequence_blocks:
-        block_results = kmer_db.bin_reads(block)
-        results.update(block_results)
-
-    write_output_file(results, args.output_file)
-
+    kmer_db.build_kmer_database(db_ref, bins, args.ambiguity_threshold)
+    kmer_db.write_pyseq_dbi(args.output)
 
 if __name__ == '__main__':
     main()

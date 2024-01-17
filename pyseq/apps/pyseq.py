@@ -3,17 +3,19 @@ import sys
 import argparse
 import pyseq
 from pyseq.apps.pyseq_bin_reads import main
+from pyseq.apps.pyseq_build_db import main
 
 
 SUBCOMMANDS = {
-    "bin_reads" : pyseq.apps.pyseq_bin_reads.main
+    "bin_reads" : pyseq.apps.pyseq_bin_reads.main,
+    "build_db"  : pyseq.apps.pyseq_build_db.main
 }
 
-USAGE = """Usage: pyseq <subcommand>
+USAGE = """Usage: pyseq <subcommand> <subcommand_arguments>
 
 Available subcommands:
-build_db     |  Create kmer database from reference sequences and store in file
-bin_reads    |  Create kmer database from reference sequence and search reads
+build_db     | Create a minimizer-based kmer reference database and write to file
+bin_reads    | Bin reads against a minimizer-based kmer reference database
 """
 
 
