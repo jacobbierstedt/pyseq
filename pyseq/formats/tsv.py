@@ -31,26 +31,56 @@ class Tsv(object):
         if path is not None:
             self.load_from_file(path)
 
-    def load_from_file(self, path, sep = "\t"):
+    def load_from_file(self,
+        path      : str,
+        sep       : str  = '\t',
+        skip_char : chr  = None,
+        columns   : list = None
+        ):
         """
         Load Tsv object from file. Guess types and handle na values.
         :param path: path to file
         :param sep: field separator
+        :param skip_char: skip lines starting with this character
         """
         self.sep = sep
         with open(path, "r") as f:
-            self.columns = f.readline().strip().split(self.sep)
-            self._n_fields = len(self.columns)
-            for line in f:
-                lss = line.strip().split(self.sep)
-                if len(lss) != self._n_fields:
-                    raise TsvFormatException(
-                        f"Number of elements in row does not match number of elements in header. Offending line: {line}")
-                data = {}
-                for i in range(0, len(self.columns)):
-                    val = self._get_type(lss[i])
-                    data.update({self.columns[i] : val})
+            line = f.readline().strip()
+            # Ability to provide character skipping lines useful for some formats
+            if skip_char is not None:
+                line = f.readline().strip()
+                while line[0] == skip_char:
+                    line = f.readline().strip()
+            # Set or get columns from file
+            if columns is not None:
+                self.columns = columns
+                self._n_fields = len(self.columns)
+                data = self._parse_line(line)
                 self.info.append(data)
+            else:
+                self.columns = line.split(self.sep)
+            self._n_fields = len(self.columns)
+            # Parse the rest of the file
+            for line in f:
+                if skip_char is not None and line[0] == skip_char:
+                    continue
+                data = self._parse_line(line)
+                self.info.append(data)
+
+    def _parse_line(self, line: str) -> dict:
+        """
+        Parse single line of tabular file.
+        :param line: string representing single line in file
+        """
+        lss = line.strip().split(self.sep)
+        if len(lss) != self._n_fields:
+            raise TsvFormatException(
+                f"Number of elements in row does not match number of elements in header. Offending line: {line}")
+        data = {}
+        for i in range(0, len(self.columns)):
+            val = self._get_type(lss[i])
+            data.update({self.columns[i] : val})
+        return data
 
     def write_file(self, output_file: str, sep = "\t"):
         """
