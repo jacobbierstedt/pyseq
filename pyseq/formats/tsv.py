@@ -2,7 +2,11 @@ import os
 import json
 import ast
 
+
+
+
 class TsvFormatException(Exception): pass
+
 
 class Tsv(object):
     """
@@ -76,8 +80,6 @@ class Tsv(object):
                     row.update({col_k : self.na_value})
         self._n_fields = len(self.columns)
 
-
-
     def _get_type(self, value: str):
         """
         Method for guessing type of provided value
@@ -114,15 +116,3 @@ class Tsv(object):
         headers = self.sep.join([str(i) for i in self.info[0].keys()])
         values = "\n".join([self.sep.join([str(i) for i in row.values()]) for row in self.info])
         return headers + "\n" + values
-
-
-# def main():
-#
-#     its = Tsv()
-#     its.load_from_file("demo_tsv.tsv")
-#     print(its)
-#
-#
-#
-# if __name__ == '__main__':
-#     main()
