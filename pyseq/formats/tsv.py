@@ -7,11 +7,15 @@ class TsvFormatException(Exception): pass
 class Tsv(object):
     """
     Class to parse and handle data from tabular files. The data is stored in
-    a list of dictionaries keyed by the name of the column names in the file.
+    a list of dictionaries keyed by column names in the file.
+    The class assumes a properly formatted TSV file and does not have the
+    functionality built in yet to handle improperly formatted data. All columns
+    must be present in every row of the file.
+    :param path: path to file to load in constructor
     """
     DEFAULT_SEP = "\t"
     DEFAULT_NA_VALUE = None
-    def __init__(self):
+    def __init__(self, path=None):
         super(Tsv, self).__init__()
         self.info      = []
         self.sep       = Tsv.DEFAULT_SEP
@@ -19,6 +23,9 @@ class Tsv(object):
         self.na_value  = Tsv.DEFAULT_NA_VALUE
         self._n_fields = 0
         self.columns   = []
+
+        if path is not None:
+            self.load_from_file(path)
 
     def load_from_file(self, path, sep = "\t"):
         """
@@ -50,7 +57,25 @@ class Tsv(object):
         with open(output_file, "w") as f:
             f.write(f"{sep.join(self.columns)}\n")
             for row in self.info:
-                f.write(f"{sep.join([self._get_type_out(row[column]) for column in self.columns])}\n")
+                f.write(f"{sep.join([self._get_type_out(row.get(column, str(self.na_value))) for column in self.columns])}\n")
+
+    def add_info(self, info: list):
+        """
+        Add rows to TSV object from lists of dictionaries.
+        :param info: list of dictionaries
+        """
+        for row in info:
+            for k, v in row.items():
+                if k not in self.columns:
+                    self.columns.append(k)
+            self.info.append(row)
+
+        for row in self.info:
+            for col_k in self.columns:
+                if col_k not in row.keys():
+                    row.update({col_k : self.na_value})
+        self._n_fields = len(self.columns)
+
 
 
     def _get_type(self, value: str):
