@@ -1,7 +1,7 @@
 # PySeq - A Python tool kit for biological sequence data
 Python development tool kit for common biological sequence data manipulations
 
-pyseq is a python package intended to facilitate development or exploration of biological sequence data and is always a WIP. As such, there are many limitations and optimizations to be made. 
+pyseq is a python package intended to facilitate development or exploration of biological sequence data and is always a WIP. As such, there are many limitations, optimizations to be made, and probably some bugs.
 
 ### Quick start
 pyseq is a pip installable python package. To begin using, clone the repo, and install the package in your environment.
@@ -46,8 +46,8 @@ To list available subcommands:
 ```
 pyseq -h
 ```
-### pyseq bin_reads
-`bin_reads` builds a minimized kmer database from a set of reference sequences and an associated json that defines the bins. It then assigns reads to the bins using weighted kmer counts based on matches between read minimizers and database minimizers. The read is classified to the bin with the highest weighted kmer count.
+### pyseq bin_reads and build_db
+`bin_reads` uses an existing database (or builds one) from a set of reference sequences and an associated json that defines the bins. It then assigns reads to the bins using weighted kmer counts based on matches between read minimizers and database minimizers. The read is classified to the bin with the highest weighted kmer count.
 
 An example of the json file defining the bins:
 ```json
@@ -57,7 +57,7 @@ An example of the json file defining the bins:
   "reference_3" : "bin_2"
 }
 ```
-Example reference fasta:
+Example paired reference fasta:
 ```
 >reference_1
 ATGCATCATGCATGCATGC
@@ -68,5 +68,8 @@ ATGCATGCATGCATGCATGCATGC
 ```
 Usage:
 ```
+pyseq build_db -f references.fasta -o database.pyseq.dbi -b bins.json -k 29 -m 22 -a 2
+pyseq bin_reads -d database.pyseq.dbi -i reads.fastq -b bins.json -k 29 -m 22 -a 2 -o binned_reads.json
+-- or --
 pyseq bin_reads -r references.fasta -i reads.fastq -b bins.json -k 29 -m 22 -a 2 -o binned_reads.json
 ```
